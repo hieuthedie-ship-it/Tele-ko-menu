@@ -1,0 +1,222 @@
+-- =========================================================================
+-- BAN VIP: MENU MINI TRANG ĐEN & TARGET FLING & TELEPORT VỀ CHỖ CŨ (BACK)
+-- THUONG HIEU: HIEUDZ SỐ 1 - TOI UU MOI THIET BI DELTA MOBILE
+-- =========================================================================
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Khử trùng bộ nhớ GUI cũ
+local oldGui = game:GetService("CoreGui"):FindFirstChild("HieuDzFlingDeviceGui") or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("HieuDzFlingDeviceGui")
+if oldGui then oldGui:Destroy() end
+
+-- 1. Tạo Giao diện ScreenGui Mini Trắng Đen
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "HieuDzFlingDeviceGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.Size = UDim2.new(0, 195, 0, 155)
+MainFrame.Position = UDim2.new(0.5, -97, 0.4, -77)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 0
+
+local MenuCorner = Instance.new("UICorner")
+MenuCorner.CornerRadius = UDim.new(0, 6)
+MenuCorner.Parent = MainFrame
+
+local MenuStroke = Instance.new("UIStroke")
+MenuStroke.Color = Color3.fromRGB(255, 255, 255)
+MenuStroke.Thickness = 2
+MenuStroke.Parent = MainFrame
+
+-- Tiêu đề HieuDz
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 28)
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Title.Text = "★ HIEUDZ - TARGET FLING ★"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 11
+Title.Font = Enum.Font.GothamBold
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 6)
+TitleCorner.Parent = Title
+
+-- Khung danh sách người chơi
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Parent = MainFrame
+ScrollingFrame.Size = UDim2.new(0, 178, 0, 90)
+ScrollingFrame.Position = UDim2.new(0.04, 0, 0.24, 0)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ScrollBarThickness = 3
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = ScrollingFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 3)
+
+-- Hướng dẫn dưới chân
+local InfoText = Instance.new("TextLabel")
+InfoText.Parent = MainFrame
+InfoText.Size = UDim2.new(1, 0, 0, 15)
+InfoText.Position = UDim2.new(0, 0, 0.89, 0)
+InfoText.BackgroundTransparency = 1
+InfoText.Text = "By HieuDz | Auto-Back | Phím [ M ]"
+InfoText.TextColor3 = Color3.fromRGB(130, 130, 140)
+InfoText.TextSize = 8
+InfoText.Font = Enum.Font.SourceSansItalic
+
+-- =========================================================================
+-- LOGIC AN TOÀN CHO MOBILE: CƠ CHẾ LƯU VÀ QUAY VỀ VỊ TRÍ CŨ (TELEPORT BACK)
+-- =========================================================================
+local targetPlayer = nil
+local flingActive = false
+local bam = nil
+local oldLocation = nil -- Biến lưu trữ vị trí cũ của bạn
+
+-- Hàm đưa nhân vật về vị trí cũ một cách an toàn
+local function teleportBack()
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if myRoot and oldLocation then
+        myRoot.CFrame = oldLocation -- Biến về chỗ cũ ngay lập tức
+        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Triệt tiêu lực quán tính tránh rơi tự do
+        oldLocation = nil -- Xoá bộ nhớ đệm vị trí
+    end
+end
+
+-- Hàm cập nhật danh sách người chơi
+local function updatePlayerList()
+    for _, child in ipairs(ScrollingFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local P_Button = Instance.new("TextButton")
+            P_Button.Size = UDim2.new(1, -5, 0, 24)
+            P_Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            P_Button.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+            P_Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+            P_Button.TextSize = 9
+            P_Button.Font = Enum.Font.GothamSemibold
+            P_Button.Parent = ScrollingFrame
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = P_Button
+            
+            if targetPlayer == p then
+                P_Button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                P_Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+                local bStroke = Instance.new("UIStroke")
+                bStroke.Color = Color3.fromRGB(255, 255, 255)
+                bStroke.Thickness = 1
+                bStroke.Parent = P_Button
+                
+                if flingActive then
+                    P_Button.Text = "🎯 [ ĐANG BAY MÀU ] " .. p.Name
+                end
+            end
+            
+            P_Button.MouseButton1Click:Connect(function()
+                local myChar = LocalPlayer.Character
+                local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                
+                if targetPlayer == p then
+                    -- Người dùng bấm TẮT chủ động
+                    flingActive = false
+                    targetPlayer = nil
+                    teleportBack() -- Triệu hồi về chỗ cũ
+                else
+                    -- Người dùng bấm BẬT nhắm mục tiêu
+                    if myRoot then
+                        oldLocation = myRoot.CFrame -- GHI NHỚ VỊ TRÍ ĐỨNG HIỆN TẠI
+                    end
+                    targetPlayer = p
+                    flingActive = true
+                end
+                updatePlayerList()
+            end)
+        end
+    end
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+end
+
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(function(p)
+    if targetPlayer == p then 
+        flingActive = false 
+        targetPlayer = nil 
+        teleportBack()
+    end
+    updatePlayerList()
+end)
+updatePlayerList()
+
+-- Vòng lặp xử lý quẩy Fling lốc xoáy
+RunService.Heartbeat:Connect(function()
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if not myChar or not myRoot then return end
+    
+    if flingActive and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local enemyRoot = targetPlayer.Character.HumanoidRootPart
+        
+        for _, part in ipairs(myChar:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+        
+        if not bam or not bam.Parent then
+            bam = Instance.new("BodyAngularVelocity")
+            bam.Name = "HieuDzFlingXoay"
+            bam.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            bam.AngularVelocity = Vector3.new(0, 99999, 0)
+            bam.Parent = myRoot
+        end
+        
+        -- Áp sát mục tiêu liên tục
+        myRoot.CFrame = enemyRoot.CFrame * CFrame.new(0, 0, 0)
+        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    else
+        if bam then bam:Destroy() bam = nil end
+        -- Tự động bay về vị trí cũ nếu mục tiêu bị văng khỏi map hoặc chết rụng rốn
+        if flingActive and (not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart")) then
+            flingActive = false
+            targetPlayer = nil
+            teleportBack() -- Tự động biến về chỗ cũ khi xong việc
+            updatePlayerList()
+        end
+    end
+end)
+
+-- Phím M ẩn hiện & Kéo thả Menu mượt mà trên Mobile
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.M then MainFrame.Visible = not MainFrame.Visible end
+end)
+
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true dragStart = input.Position startPos = MainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)

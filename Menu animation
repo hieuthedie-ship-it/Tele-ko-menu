@@ -1,0 +1,134 @@
+-- [[ CONFIG ANIMATION ID - THAY THẾ ID CỦA BẠN TẠI ĐÂY ]]
+local AnimConfig = {
+    R6 = {
+        dung = "rbxassetid://125750702",   -- Thay ID R6 Đứng vào đây
+        chay = "rbxassetid://180426354",   -- Thay ID R6 Chạy vào đây
+        nam  = "rbxassetid://13115456209"  -- Thay ID R6 Nằm vào đây
+    },
+    R15 = {
+        dung = "rbxassetid://507766388",   -- Thay ID R15 Đứng vào đây
+        chay = "rbxassetid://507766666",   -- Thay ID R15 Chạy vào đây
+        nam  = "rbxassetid://13115456209"  -- Thay ID R15 Nằm vào đây
+    }
+}
+
+-- [[ KHỞI TẠO BIẾN HỆ THỐNG ]]
+local Players = game:GetService("Players")
+local lplayer = Players.LocalPlayer
+local char = lplayer.Character or lplayer.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+local currentTrack = nil
+
+-- Tự động kiểm tra loại nhân vật R6 hay R15
+local currentRig = (humanoid.RigType == Enum.HumanoidRigType.R15) and "R15" or "R6"
+
+-- Hàm kích hoạt hoạt ảnh
+local function PlayAnim(animType)
+    if currentTrack then currentTrack:Stop() end
+    
+    local animId = AnimConfig[currentRig][animType]
+    local animation = Instance.new("Animation")
+    animation.AnimationId = animId
+    
+    local success, track = pcall(function()
+        return humanoid:LoadAnimation(animation)
+    end)
+    
+    if success and track then
+        -- Nếu là dáng Nằm hoặc Đứng, ta lặp vô tận (Loop)
+        if animType == "nam" or animType == "dung" then
+            track.Looped = true
+        else
+            track.Looped = false
+        end
+        track:Play()
+        currentTrack = track
+    else
+        warn("Không thể tải Animation ID. Hãy kiểm tra lại quyền sở hữu ID!")
+    end
+end
+
+-- [[ TẠO GIAO DIỆN UI MOBILE TRỰC QUAN ]]
+-- Xóa GUI cũ nếu có để tránh trùng lặp
+local oldGui = lplayer.PlayerGui:FindFirstChild("AnimMenuMobile")
+if oldGui then oldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AnimMenuMobile"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = lplayer.PlayerGui
+
+-- Khung chứa chính (Menu Frame)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 160, 0, 240)
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0) -- Nằm bên góc trái màn hình điện thoại
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true -- Có thể giữ và kéo menu di chuyển trên màn hình cảm ứng
+MainFrame.Parent = ScreenGui
+
+-- Bo góc cho Menu
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- Tiêu đề Menu
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "ANIM MENU (" .. currentRig .. ")"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.SourceSansBold
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
+
+-- Thiết kế các nút bấm nhanh (Đứng, Chạy, Nằm, Reset)
+local function CreateButton(name, text, color, positionY, callback)
+    local Button = Instance.new("TextButton")
+    Button.Name = name
+    Button.Size = UDim2.new(0, 130, 0, 35)
+    Button.Position = UDim2.new(0.5, -65, 0, positionY)
+    Button.BackgroundColor3 = color
+    Button.Text = text
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.TextSize = 14
+    Button.Font = Enum.Font.SourceSansBold
+    Button.BorderSizePixel = 0
+    Button.Parent = MainFrame
+    
+    local BCorner = Instance.new("UICorner")
+    BCorner.CornerRadius = UDim.new(0, 6)
+    BCorner.Parent = Button
+    
+    Button.MouseButton1Click:Connect(callback)
+end
+
+-- Khởi tạo chức năng cụ thể cho từng nút bấm
+CreateButton("BtnDung", "🚶 ĐÁNG ĐỨNG", Color3.fromRGB(46, 117, 89), 50, function()
+    PlayAnim("dung")
+end)
+
+CreateButton("BtnChay", "🏃 DÁNG CHẠY", Color3.fromRGB(31, 78, 121), 95, function()
+    PlayAnim("chay")
+end)
+
+CreateButton("BtnNam", "🛏️ DÁNG NẰM", Color3.fromRGB(123, 44, 121), 140, function()
+    PlayAnim("nam")
+end)
+
+CreateButton("BtnReset", "❌ TẮT ANIM", Color3.fromRGB(150, 40, 40), 185, function()
+    if currentTrack then 
+        currentTrack:Stop() 
+        currentTrack = nil
+    end
+end)
+
+-- Tự động cập nhật lại thông tin khi nhân vật bị reset/hồi sinh
+lplayer.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    humanoid = char:WaitForChild("Humanoid")
+    currentRig = (humanoid.RigType == Enum.HumanoidRigType.R15) and "R15" or "R6"
+    Title.Text = "ANIM MENU (" .. currentRig .. ")"
+    currentTrack = nil
+end)

@@ -1,0 +1,185 @@
+-- Khởi tạo các dịch vụ cốt lõi của Roblox
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- DANH SÁCH CÁC CỬ ĐỘNG (Có thể thay đổi ID Animation của bạn tại đây)
+local AnimationList = {
+    { Name = "Nhảy Múa (Dance)", ID = "rbxassetid://507371204" },
+    { Name = "Chào Hỏi (Wave)", ID = "rbxassetid://507370375" },
+    { Name = "Cổ Vũ (Cheer)", ID = "rbxassetid://507370677" },
+    { Name = "Hành Lễ (Bow)", ID = "rbxassetid://507368947" }
+}
+
+----------------------------------------------------------------------
+-- 1. THIẾT KẾ GIAO DIỆN MENU MÀU TÍM (PURPLE SYSTEM)
+----------------------------------------------------------------------
+-- Tạo khung chứa tổng ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PurpleEmoteMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Tạo bảng Menu chính (Main Frame)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 260, 0, 360)
+MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0) -- Nằm ở cạnh trái màn hình
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35) -- Màu tím đen huyền bí
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false -- Mặc định ẩn, bấm nút hoặc nhấn phím mới hiện
+MainFrame.Parent = ScreenGui
+
+-- Bo góc cho bảng Menu
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0, 12)
+FrameCorner.Parent = MainFrame
+
+-- Viền Neon Tím phát sáng xung quanh Menu
+local FrameStroke = Instance.new("UIStroke")
+FrameStroke.Color = Color3.fromRGB(170, 0, 255) -- Màu tím Neon sáng
+FrameStroke.Thickness = 1.5
+FrameStroke.Parent = MainFrame
+
+-- Tiêu đề của Menu (Title)
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, 0, 0, 45)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(45, 20, 65) -- Tím đậm thanh lịch
+TitleLabel.Text = "🔮 MENU CỬ ĐỘNG"
+TitleLabel.TextColor3 = Color3.fromRGB(240, 220, 255) -- Chữ trắng hồng nhạt
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 18
+TitleLabel.BorderSizePixel = 0
+TitleLabel.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleLabel
+
+-- Khung danh sách chứa các nút bấm (ScrollingFrame)
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Name = "ScrollFrame"
+ScrollFrame.Size = UDim2.new(1, -20, 1, -65)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 55)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(170, 0, 255) -- Thanh cuộn màu tím
+ScrollFrame.Parent = MainFrame
+
+-- Tự động sắp xếp các nút bấm theo hàng dọc
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ScrollFrame
+
+-- Cập nhật kích thước vùng cuộn danh sách tự động
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
+end)
+
+----------------------------------------------------------------------
+-- 2. TẠO CÁC NÚT BẬT/TẮT MENU (CẢ CẢM ỨNG VÀ PHÍM BẤM)
+----------------------------------------------------------------------
+-- CÁCH 1: Tạo nút bấm tròn cảm ứng màu tím trên màn hình (Cho Điện Thoại)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenMenuButton"
+OpenButton.Size = UDim2.new(0, 55, 0, 55)
+OpenButton.Position = UDim2.new(0.05, 0, 0.2, 0) -- Đặt ở góc trái phía trên menu
+OpenButton.BackgroundColor3 = Color3.fromRGB(140, 0, 220) -- Tím hoàng gia
+OpenButton.Text = "🕺"
+OpenButton.TextSize = 24
+OpenButton.BorderSizePixel = 0
+OpenButton.Parent = ScreenGui
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 50) -- Bo tròn hoàn hảo
+BtnCorner.Parent = OpenButton
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = Color3.fromRGB(210, 150, 255) -- Viền sáng quanh nút tròn
+BtnStroke.Thickness = 2
+BtnStroke.Parent = OpenButton
+
+-- Sự kiện click nút tròn để Ẩn/Hiện Menu mượt mà
+OpenButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- CÁCH 2: Nhấn phím "M" trên bàn phím để Ẩn/Hiện Menu (Cho Máy Tính)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end -- Không kích hoạt nếu người chơi đang gõ ô chat
+    if input.KeyCode == Enum.KeyCode.M then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+----------------------------------------------------------------------
+-- 3. LOGIC XỬ LÝ HOẠT ẢNH VÀ TẠO DANH SÁCH NÚT CỬ ĐỘNG
+----------------------------------------------------------------------
+local currentTrack = nil -- Biến lưu trữ hoạt ảnh đang chạy
+
+local function playEmote(animationId)
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local animator = humanoid and humanoid:FindFirstChildOfClass("Animator")
+    
+    if animator then
+        if currentTrack then
+            currentTrack:Stop() -- Dừng cử động cũ trước khi chạy cái mới
+        end
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = animationId
+        
+        currentTrack = animator:LoadAnimation(anim)
+        currentTrack:Play()
+    end
+end
+
+-- Vòng lặp tự động tạo các nút bấm màu tím
+for i, emote in ipairs(AnimationList) do
+    local Button = Instance.new("TextButton")
+    Button.Name = "EmoteBtn_" .. i
+    Button.Size = UDim2.new(1, 0, 0, 45)
+    Button.BackgroundColor3 = Color3.fromRGB(60, 30, 90) -- Màu nút tím vừa
+    Button.Text = emote.Name
+    Button.TextColor3 = Color3.fromRGB(245, 235, 255) -- Chữ sáng màu tím nhạt
+    Button.Font = Enum.Font.SourceSansSemibold
+    Button.TextSize = 15
+    Button.BorderSizePixel = 0
+    Button.Parent = ScrollFrame
+    
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 8)
+    ButtonCorner.Parent = Button
+    
+    -- Hiệu ứng đổi màu Neon cực đẹp khi di chuột vào (Hover Effect)
+    Button.MouseEnter:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(100, 40, 150)}):Play()
+    end)
+    Button.MouseLeave:Connect(function()
+        TweenService:Create(Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 30, 90)}):Play()
+    end)
+    
+    -- Khi người chơi nhấn vào nút cử động
+    Button.MouseButton1Click:Connect(function()
+        playEmote(emote.ID)
+    end)
+end
+
+-- TỰ ĐỘNG DỪNG CỬ ĐỘNG KHI NHÂN VẬT DI CHUYỂN
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local humanoid = char:WaitForChild("Humanoid")
+    humanoid.Running:Connect(function(speed)
+        if speed > 0.1 and currentTrack then
+            currentTrack:Stop()
+            currentTrack = nil
+        end
+    end)
+end)
